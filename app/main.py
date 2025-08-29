@@ -9,6 +9,8 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.openapi.utils import get_openapi
 from loguru import logger
 import sys
 
@@ -110,6 +112,42 @@ setup_cors_middleware(app)
 
 # Setup metrics middleware
 setup_metrics_middleware(app)
+
+# Define security scheme for Swagger UI
+security = HTTPBearer()
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    
+    # Add security scheme
+    openapi_schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "Enter your Supabase JWT token"
+        }
+    }
+    
+    # Apply security globally to all endpoints except health endpoints
+    for path_item in openapi_schema["paths"].values():
+        for method in path_item.values():
+            if isinstance(method, dict) and "tags" in method:
+                if "Health" not in method.get("tags", []):
+                    method["security"] = [{"BearerAuth": []}]
+    
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
 
 # Include routers
 app.include_router(health.router, tags=["Health"])
