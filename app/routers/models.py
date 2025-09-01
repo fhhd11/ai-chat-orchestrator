@@ -6,7 +6,7 @@ from datetime import datetime
 from loguru import logger
 
 from ..dependencies import get_current_user, get_litellm_service, get_cache_service
-from ..models.litellm import LiteLLMModel
+from ..models.litellm import LiteLLMModel, ModelStatus
 from ..models.common import SuccessResponse, ErrorResponse, PaginatedResponse
 from ..models.user import UserProfile
 from ..services.litellm_client import LiteLLMService
@@ -96,7 +96,7 @@ async def list_models(
                 continue
             
             # Availability filter
-            if available_only and not model.available:
+            if available_only and model.status != ModelStatus.AVAILABLE:
                 continue
             
             filtered_models.append(model)
@@ -240,7 +240,7 @@ async def list_providers(
             provider_info = providers_data[provider]
             provider_info["total_models"] += 1
             
-            if model.available:
+            if model.status == ModelStatus.AVAILABLE:
                 provider_info["available_models"] += 1
             
             if model.model_type:
@@ -293,7 +293,7 @@ async def list_providers(
             provider_info["models"].append({
                 "id": model.id,
                 "display_name": model.display_name,
-                "available": model.available,
+                "available": model.status == ModelStatus.AVAILABLE,
                 "model_type": model.model_type
             })
         
@@ -522,7 +522,7 @@ async def compare_models(
                 "basic_info": {
                     "providers": [m.provider for m in models],
                     "model_types": [m.model_type for m in models],
-                    "availability": [m.available for m in models]
+                    "availability": [m.status == ModelStatus.AVAILABLE for m in models]
                 },
                 "capabilities": {
                     "streaming": [m.supports_streaming for m in models],
