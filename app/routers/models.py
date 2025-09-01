@@ -41,7 +41,7 @@ async def list_models(
     max_output_tokens: Optional[int] = Query(None, description="Filter by minimum output token limit"),
     max_cost_per_1k_input: Optional[float] = Query(None, description="Filter by maximum cost per 1K input tokens"),
     available_only: bool = Query(True, description="Show only currently available models"),
-    sort_by: Optional[str] = Query("display_name", description="Sort field (display_name, provider, cost_input, max_input_tokens)"),
+    sort_by: Optional[str] = Query("name", description="Sort field (name, provider, cost_input, max_input_tokens)"),
     sort_order: Optional[str] = Query("asc", regex="^(asc|desc)$", description="Sort order"),
     request: Request = None,
     current_user: UserProfile = Depends(get_current_user),
@@ -109,8 +109,8 @@ async def list_models(
             filtered_models.sort(key=lambda x: x.cost_per_1k_input or 0, reverse=reverse)
         elif sort_by == "max_input_tokens":
             filtered_models.sort(key=lambda x: x.max_input_tokens or 0, reverse=reverse)
-        else:  # default to display_name
-            filtered_models.sort(key=lambda x: x.display_name.lower(), reverse=reverse)
+        else:  # default to name
+            filtered_models.sort(key=lambda x: x.name.lower(), reverse=reverse)
         
         response = {
             "success": True,
@@ -218,8 +218,7 @@ async def list_providers(
             provider = model.provider
             if provider not in providers_data:
                 providers_data[provider] = {
-                    "name": provider,
-                    "display_name": provider.title(),
+                    "name": provider.title(),
                     "total_models": 0,
                     "available_models": 0,
                     "model_types": set(),
@@ -292,7 +291,7 @@ async def list_providers(
             # Add basic model info
             provider_info["models"].append({
                 "id": model.id,
-                "display_name": model.display_name,
+                "name": model.name,
                 "available": model.status == ModelStatus.AVAILABLE,
                 "model_type": model.model_type
             })
@@ -401,7 +400,7 @@ async def search_models(
             # Search in various fields
             searchable_text = [
                 model.id.lower(),
-                model.display_name.lower(),
+                model.name.lower(),
                 model.provider.lower(),
                 model.model_type.lower() if model.model_type else "",
                 model.description.lower() if model.description else ""
@@ -434,9 +433,9 @@ async def search_models(
                 score += 100
             elif query in model.id.lower():
                 score += 50
-            if query == model.display_name.lower():
+            if query == model.name.lower():
                 score += 80
-            elif query in model.display_name.lower():
+            elif query in model.name.lower():
                 score += 40
             if query == model.provider.lower():
                 score += 60

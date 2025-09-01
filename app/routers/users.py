@@ -13,6 +13,7 @@ from ..models.user import (
 from ..models.common import SuccessResponse, ErrorResponse, PaginatedResponse
 from ..services.edge_proxy import EdgeFunctionProxy
 from ..services.cache_service import CacheService
+from ..services.supabase_direct import SupabaseDirectClient
 from ..config import settings
 from ..utils.validators import ValidationUtils
 
@@ -56,13 +57,16 @@ async def get_current_user_profile(
         auth_header = request.headers.get("Authorization", "")
         user_token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else ""
         
-        # Proxy request to Edge Function
-        response = await edge_proxy.proxy_request(
-            method="GET",
-            path="/v1/users/me",
-            user_token=user_token,
-            query_params=query_params
-        )
+        # Use direct Supabase client instead of Edge Function
+        supabase_client = SupabaseDirectClient()
+        try:
+            profile_data = await supabase_client.get_user_profile(current_user.id, user_token)
+            response = {
+                "success": True,
+                "data": profile_data
+            }
+        finally:
+            await supabase_client.close()
         
         # Cache result for 5 minutes
         if settings.redis_enabled and response.get("success"):

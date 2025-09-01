@@ -27,39 +27,39 @@ class EdgeFunctionProxy:
         
         # Endpoint mappings from FastAPI routes to Edge Function endpoints
         self.endpoint_mappings = {
-            # Legacy endpoints (direct mapping)
-            "/init-conversation": "/init-conversation",
-            "/add-message": "/add-message", 
-            "/save-response": "/save-response",
-            "/create-branch": "/create-branch",
-            "/switch-branch": "/switch-branch",
-            "/build-context": "/build-context",
+            # Legacy endpoints (direct mapping to conversation-manager)
+            "/init-conversation": "/conversation-manager/init-conversation",
+            "/add-message": "/conversation-manager/add-message", 
+            "/save-response": "/conversation-manager/save-response",
+            "/create-branch": "/conversation-manager/create-branch",
+            "/switch-branch": "/conversation-manager/switch-branch",
+            "/build-context": "/conversation-manager/build-context",
             
             # New REST endpoints mapping
             "/v1/conversations": {
-                "GET": "/conversations",
-                "POST": "/conversations"
+                "GET": "/conversation-manager/conversations",
+                "POST": "/conversation-manager/conversations"
             },
             "/v1/conversations/{id}": {
-                "GET": "/conversations/{id}",
-                "PATCH": "/conversations/{id}"
+                "GET": "/conversation-manager/conversations/{id}",
+                "PATCH": "/conversation-manager/conversations/{id}"
             },
             "/v1/conversations/{id}/full": {
-                "GET": "/conversations/{id}/full"
+                "GET": "/conversation-manager/conversations/{id}/full"
             },
             "/v1/conversations/{id}/branches": {
-                "GET": "/conversations/{id}/branches",
-                "POST": "/conversations/{id}/branches"
+                "GET": "/conversation-manager/conversations/{id}/branches",
+                "POST": "/conversation-manager/conversations/{id}/branches"
             },
             "/v1/conversations/{id}/branches/{branch_id}/activate": {
-                "POST": "/conversations/{id}/branches/{branch_id}/activate"
+                "POST": "/conversation-manager/conversations/{id}/branches/{branch_id}/activate"
             },
             "/v1/messages/{id}": {
-                "GET": "/messages/{id}",
-                "PATCH": "/messages/{id}"
+                "GET": "/conversation-manager/messages/{id}",
+                "PATCH": "/conversation-manager/messages/{id}"
             },
             "/v1/messages/{id}/regenerate": {
-                "POST": "/messages/{id}/regenerate"
+                "POST": "/conversation-manager/messages/{id}/regenerate"
             }
         }
     

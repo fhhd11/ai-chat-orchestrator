@@ -187,14 +187,11 @@ app.include_router(messages.router, tags=["Messages"])
 app.include_router(models.router, tags=["Models"])
 app.include_router(users.router, tags=["Users"])
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
-# Add favicon route
+# Add favicon route (simple response to avoid StaticFiles complexity)
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     """Serve favicon"""
-    return RedirectResponse(url="/static/favicon.ico")
+    return {"message": "No favicon available"}
 
 
 @app.get("/", include_in_schema=False)
