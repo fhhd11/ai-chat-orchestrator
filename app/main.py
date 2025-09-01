@@ -15,7 +15,7 @@ from loguru import logger
 import sys
 
 from .config import settings
-from .routers import health, chat, conversations
+from .routers import health, chat, conversations, branches, messages, models, users
 from .middleware import (
     add_request_id_middleware,
     logging_middleware,
@@ -175,6 +175,10 @@ app.openapi = custom_openapi
 app.include_router(health.router, tags=["Health"])
 app.include_router(chat.router, tags=["Chat"])
 app.include_router(conversations.router, tags=["Conversations"])
+app.include_router(branches.router, tags=["Branches"])
+app.include_router(messages.router, tags=["Messages"])
+app.include_router(models.router, tags=["Models"])
+app.include_router(users.router, tags=["Users"])
 
 
 @app.get("/", include_in_schema=False)

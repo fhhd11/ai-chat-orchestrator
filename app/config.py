@@ -36,11 +36,14 @@ class Settings(BaseSettings):
     redis_password: Optional[str] = None
     redis_db: int = 0
     redis_enabled: bool = False
+    redis_max_connections: int = 10
+    redis_retry_attempts: int = 3
     
     # Cache Settings
     cache_ttl_models: int = 3600  # 1 hour
     cache_ttl_user_profile: int = 900  # 15 minutes
     cache_ttl_conversations: int = 300  # 5 minutes
+    cache_ttl_default: int = 3600  # 1 hour
     
     # Security Settings
     jwt_secret_key: str
@@ -57,6 +60,9 @@ class Settings(BaseSettings):
     rate_limit_enabled: bool = False
     rate_limit_requests_per_minute: int = 60
     rate_limit_burst: int = 10
+    rate_limit_per_minute: int = 100
+    user_rate_limit_per_minute: int = 60
+    user_rate_limit_burst: int = 10
     
     # Performance Settings
     max_context_messages: int = 100
@@ -65,6 +71,7 @@ class Settings(BaseSettings):
     max_concurrent_requests: int = 50
     request_timeout: int = 30
     keepalive_timeout: int = 65
+    stream_buffer_size: int = 1024
     
     # Monitoring & Observability
     enable_metrics: bool = True
@@ -73,10 +80,17 @@ class Settings(BaseSettings):
     structured_logging: bool = True
     log_requests: bool = True
     log_responses: bool = False  # Only for debugging
+    enable_structured_logging: bool = True
+    enable_request_logging: bool = True
+    enable_business_logging: bool = True
+    enable_security_logging: bool = True
     
     # Health Check Settings
     health_check_interval: int = 30  # seconds
     health_check_timeout: int = 5  # seconds
+    health_check_path: str = "/health"
+    readiness_probe_path: str = "/ready"
+    liveness_probe_path: str = "/live"
     
     # Feature Flags
     enable_swagger: bool = True
@@ -88,6 +102,15 @@ class Settings(BaseSettings):
     enable_search: bool = True
     enable_batch_operations: bool = True
     enable_analytics: bool = True
+    enable_branch_merging: bool = True
+    enable_message_editing: bool = True
+    enable_conversation_export: bool = True
+    enable_conversation_sharing: bool = False
+    enable_user_analytics: bool = True
+    enable_user_api_keys: bool = True
+    enable_user_data_export: bool = True
+    enable_conversation_templates: bool = False
+    enable_custom_models: bool = False
     
     # File Storage (for exports, logs, etc.)
     storage_path: str = "./storage"
@@ -111,11 +134,39 @@ class Settings(BaseSettings):
     max_conversation_title_length: int = 200
     max_branch_name_length: int = 100
     max_search_query_length: int = 200
+    default_max_tokens: int = 2000
+    max_temperature: float = 2.0
+    min_balance_threshold: float = 0.01
     
     # External Service URLs (for documentation)
     frontend_url: Optional[str] = None
     docs_url: Optional[str] = None
     support_url: Optional[str] = None
+    
+    # Webhook URLs
+    webhook_url_new_user: str = ""
+    webhook_url_low_balance: str = ""
+    webhook_url_error_alert: str = ""
+    
+    # Analytics Configuration
+    analytics_enabled: bool = False
+    analytics_api_key: str = ""
+    
+    # Development Settings
+    dev_bypass_auth: bool = False
+    dev_mock_services: bool = False
+    dev_verbose_logging: bool = True
+    
+    # Test Configuration
+    test_database_url: str = ""
+    
+    # Deployment Settings
+    shutdown_timeout: int = 30
+    
+    # Legacy Compatibility
+    supabase_anon_key_legacy: str = ""
+    litellm_url_legacy: str = ""
+    debug_mode: bool = False
     
     # Development Settings
     reload: bool = False

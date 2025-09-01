@@ -216,3 +216,48 @@ class UserAnalytics(BaseModel):
     period_start: datetime = Field(..., description="Analytics period start")
     period_end: datetime = Field(..., description="Analytics period end")
     generated_at: datetime = Field(..., description="Analytics generation timestamp")
+
+
+# Additional models for users router
+UserProfileUpdate = UpdateProfileRequest  # Alias for backward compatibility
+UserPreferences = UserSettings  # Alias for backward compatibility  
+UserUsageStats = UserUsage  # Alias for backward compatibility
+
+
+class UserBalanceHistory(BaseModel):
+    """User balance transaction history"""
+    id: str = Field(..., description="Transaction ID")
+    user_id: str = Field(..., description="User ID")
+    transaction_type: str = Field(..., description="Transaction type")
+    amount: float = Field(..., description="Transaction amount")
+    balance_before: float = Field(..., description="Balance before transaction")
+    balance_after: float = Field(..., description="Balance after transaction")
+    description: Optional[str] = Field(None, description="Transaction description")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional transaction data")
+    created_at: datetime = Field(..., description="Transaction timestamp")
+
+
+class UserApiKeyInfo(BaseModel):
+    """User API key information"""
+    id: str = Field(..., description="API key ID")
+    name: str = Field(..., description="API key name")
+    key_prefix: str = Field(..., description="API key prefix (for display)")
+    permissions: List[str] = Field(default_factory=list, description="API key permissions")
+    is_active: bool = Field(True, description="Whether key is active")
+    last_used: Optional[datetime] = Field(None, description="Last usage timestamp")
+    expires_at: Optional[datetime] = Field(None, description="Expiration timestamp")
+    created_at: datetime = Field(..., description="Creation timestamp")
+
+
+class CreateApiKeyRequest(BaseModel):
+    """Create API key request"""
+    name: str = Field(..., description="API key name", max_length=100)
+    permissions: Optional[List[str]] = Field(None, description="API key permissions")
+    expires_at: Optional[datetime] = Field(None, description="Expiration timestamp")
+
+
+class UpdateApiKeyRequest(BaseModel):
+    """Update API key request"""
+    name: Optional[str] = Field(None, description="API key name", max_length=100)
+    permissions: Optional[List[str]] = Field(None, description="API key permissions")
+    is_active: Optional[bool] = Field(None, description="Whether key is active")

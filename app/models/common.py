@@ -3,6 +3,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List, Generic, TypeVar
 from datetime import datetime
+from enum import Enum
 
 T = TypeVar('T')
 
@@ -80,7 +81,7 @@ class SearchFilters(BaseModel):
     updated_before: Optional[datetime] = Field(None, description="Filter by update date (before)")
 
 
-class SortOrder(str):
+class SortOrder(str, Enum):
     """Sort order enumeration"""
     ASC = "asc"
     DESC = "desc"
@@ -115,3 +116,47 @@ class SystemInfo(BaseModel):
     uptime: float = Field(..., description="Uptime in seconds")
     features: Dict[str, bool] = Field(..., description="Available features")
     endpoints: Dict[str, Optional[str]] = Field(..., description="Available endpoints")
+
+
+class HealthResponse(BaseModel):
+    """Health check response model"""
+    status: str = Field(..., description="Overall health status")
+    version: str = Field(..., description="Application version")
+    services: Dict[str, str] = Field(default_factory=dict, description="Service health status")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Check timestamp")
+
+
+# Legacy models for backward compatibility
+class EdgeFunctionRequest(BaseModel):
+    """Edge Function request model"""
+    method: str = Field(..., description="HTTP method")
+    path: str = Field(..., description="Request path")
+    headers: Optional[Dict[str, str]] = Field(None, description="Request headers")
+    body: Optional[Any] = Field(None, description="Request body")
+
+
+class EdgeFunctionResponse(BaseModel):
+    """Base Edge Function response model"""
+    success: bool = Field(..., description="Request success status")
+    error: Optional[str] = Field(None, description="Error message if unsuccessful")
+    data: Optional[Dict[str, Any]] = Field(None, description="Response data")
+
+
+class AddMessageRequest(BaseModel):
+    """Legacy add message request"""
+    conversation_id: str
+    message: str
+    role: str = "user"
+
+
+class BuildContextRequest(BaseModel):
+    """Legacy build context request"""
+    conversation_id: str
+    max_messages: int = 50
+
+
+class SaveResponseRequest(BaseModel):
+    """Legacy save response request"""
+    conversation_id: str
+    message_id: str
+    response: str

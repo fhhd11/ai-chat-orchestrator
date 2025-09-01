@@ -31,3 +31,6 @@ __all__ = [
     "ConversationResponse", "EdgeFunctionRequest", "EdgeFunctionResponse",
     "AddMessageRequest", "BuildContextRequest", "SaveResponseRequest", "HealthResponse"
 ]
+
+# Legacy aliases for backward compatibility
+ConversationResponse = ConversationDetail

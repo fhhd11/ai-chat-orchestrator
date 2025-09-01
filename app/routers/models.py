@@ -2,10 +2,11 @@
 
 from fastapi import APIRouter, Depends, Query, Path, HTTPException, Request
 from typing import Optional, List, Dict, Any
+from datetime import datetime
 from loguru import logger
 
 from ..dependencies import get_current_user, get_litellm_service, get_cache_service
-from ..models.litellm import LiteLLMModel, ModelFilterRequest, ModelUsageInfo
+from ..models.litellm import LiteLLMModel
 from ..models.common import SuccessResponse, ErrorResponse, PaginatedResponse
 from ..models.user import UserProfile
 from ..services.litellm_client import LiteLLMService
@@ -614,4 +615,3 @@ async def compare_models(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-from datetime import datetime
