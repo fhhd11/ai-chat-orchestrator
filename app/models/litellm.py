@@ -152,6 +152,8 @@ class ModelPerformanceMetrics(BaseModel):
     """Model performance metrics"""
     model_id: str = Field(..., description="Model ID")
     
+    model_config = {"protected_namespaces": ()}
+    
     # Response metrics
     average_response_time: float = Field(..., ge=0, description="Average response time in seconds")
     median_response_time: float = Field(..., ge=0, description="Median response time in seconds")

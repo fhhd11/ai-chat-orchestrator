@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.openapi.utils import get_openapi
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 import sys
 
@@ -115,6 +116,12 @@ app = FastAPI(
     ```
     Authorization: Bearer <your-jwt-token>
     ```
+    
+    ### How to use Swagger UI:
+    1. Click the "Authorize" button (🔒) in the top right
+    2. Enter your Supabase JWT token in the "Value" field
+    3. Click "Authorize" to authenticate all requests
+    4. Test any protected endpoints
     """,
     debug=settings.debug,
     lifespan=lifespan,
@@ -179,6 +186,15 @@ app.include_router(branches.router, tags=["Branches"])
 app.include_router(messages.router, tags=["Messages"])
 app.include_router(models.router, tags=["Models"])
 app.include_router(users.router, tags=["Users"])
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# Add favicon route
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Serve favicon"""
+    return RedirectResponse(url="/static/favicon.ico")
 
 
 @app.get("/", include_in_schema=False)
