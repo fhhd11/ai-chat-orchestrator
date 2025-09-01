@@ -1,15 +1,17 @@
-"""FastAPI dependencies for dependency injection"""
+"""Enhanced FastAPI dependencies for dependency injection with new services"""
 
-from typing import Annotated
-from fastapi import Depends, Header, HTTPException
+from typing import Annotated, Optional
+from fastapi import Depends, Header, HTTPException, Request
 from cachetools import TTLCache
 from loguru import logger
 
 from .config import settings
 from .services.supabase_client import SupabaseClient
-from .services.litellm_client import LiteLLMClient
+from .services.litellm_client import LiteLLMService
 from .services.auth_service import AuthService
-from .models import UserProfile
+from .services.edge_proxy import EdgeFunctionProxy
+from .services.cache_service import CacheService, cache_service
+from .models.user import UserProfile
 from .utils.errors import (
     AuthenticationError,
     InsufficientBalanceError,
@@ -18,11 +20,12 @@ from .utils.errors import (
 
 
 # Global instances
-_supabase_client: SupabaseClient = None
-_litellm_client: LiteLLMClient = None
-_auth_service: AuthService = None
+_supabase_client: Optional[SupabaseClient] = None
+_litellm_service: Optional[LiteLLMService] = None
+_auth_service: Optional[AuthService] = None
+_edge_proxy: Optional[EdgeFunctionProxy] = None
 
-# User profile cache
+# User profile cache (fallback when Redis is not available)
 user_profile_cache = TTLCache(maxsize=500, ttl=600)  # 10 minutes TTL
 
 
@@ -34,12 +37,18 @@ async def get_supabase_client() -> SupabaseClient:
     return _supabase_client
 
 
-async def get_litellm_client() -> LiteLLMClient:
-    """Get LiteLLM client instance"""
-    global _litellm_client
-    if _litellm_client is None:
-        _litellm_client = LiteLLMClient(settings)
-    return _litellm_client
+async def get_litellm_service() -> LiteLLMService:
+    """Get LiteLLM service instance"""
+    global _litellm_service
+    if _litellm_service is None:
+        _litellm_service = LiteLLMService()
+    return _litellm_service
+
+
+# Legacy alias for backward compatibility
+async def get_litellm_client() -> LiteLLMService:
+    """Get LiteLLM client instance (legacy alias)"""
+    return await get_litellm_service()
 
 
 async def get_auth_service() -> AuthService:
@@ -48,6 +57,19 @@ async def get_auth_service() -> AuthService:
     if _auth_service is None:
         _auth_service = AuthService(settings)
     return _auth_service
+
+
+async def get_edge_proxy() -> EdgeFunctionProxy:
+    """Get Edge Function proxy service instance"""
+    global _edge_proxy
+    if _edge_proxy is None:
+        _edge_proxy = EdgeFunctionProxy()
+    return _edge_proxy
+
+
+async def get_cache_service() -> CacheService:
+    """Get cache service instance"""
+    return cache_service
 
 
 async def verify_token(
@@ -187,32 +209,151 @@ async def get_user_with_balance(
     return user_profile
 
 
-# Cleanup function for application shutdown
+async def get_current_user(
+    authorization: Annotated[str, Header()],
+    cache_service: Annotated[CacheService, Depends(get_cache_service)],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)]
+) -> UserProfile:
+    """
+    Get current user profile from JWT token with intelligent caching
+    
+    Args:
+        authorization: Authorization header with Bearer token
+        cache_service: Cache service for user profile caching
+        auth_service: Authentication service
+        
+    Returns:
+        Current user profile
+        
+    Raises:
+        HTTPException: If authentication fails or user not found
+    """
+    try:
+        # Extract and validate token
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+        
+        token = authorization.split("Bearer ")[1]
+        token_payload = auth_service.validate_token_and_get_user(authorization)
+        user_id = token_payload["sub"]
+        
+        # Try cache first
+        cache_key = f"user_profile:{user_id}"
+        cached_profile = await cache_service.get("user_profiles", cache_key)
+        if cached_profile:
+            logger.debug(f"User profile cache hit for user {user_id}")
+            # Reconstruct UserProfile from cached data
+            return UserProfile(**cached_profile["data"]) if "data" in cached_profile else UserProfile(**cached_profile)
+        
+        # Fallback to in-memory cache
+        fallback_key = f"user_profile_{user_id}"
+        if fallback_key in user_profile_cache:
+            logger.debug(f"User profile fallback cache hit for user {user_id}")
+            return user_profile_cache[fallback_key]
+        
+        # Get fresh profile from Supabase
+        supabase_client = await get_supabase_client()
+        profile = await supabase_client.get_user_profile(user_id, token)
+        
+        # Cache the profile in both systems
+        if settings.redis_enabled:
+            await cache_service.set("user_profiles", cache_key, profile.model_dump())
+        
+        # Also cache in fallback
+        user_profile_cache[fallback_key] = profile
+        logger.debug(f"User profile cached for user {user_id}")
+        
+        return profile
+        
+    except AuthenticationError as e:
+        logger.warning(f"Authentication failed: {e.message}")
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "error": e.message,
+                "code": e.code
+            }
+        )
+    except EdgeFunctionError as e:
+        logger.error(f"Failed to get user profile: {e.message}")
+        raise HTTPException(
+            status_code=403 if "not found" in e.message.lower() else 500,
+            detail={
+                "error": e.message,
+                "code": e.code
+            }
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error getting current user: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Internal server error",
+                "code": "INTERNAL_ERROR"
+            }
+        )
+
+
+# Application lifecycle management
+async def initialize_dependencies():
+    """Initialize all services and dependencies"""
+    try:
+        # Initialize cache service first
+        await cache_service.initialize()
+        logger.info("Cache service initialized")
+        
+        # Initialize other services as needed
+        logger.info("All dependencies initialized successfully")
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize dependencies: {e}")
+        raise
+
+
 async def cleanup_dependencies():
     """Cleanup resources on application shutdown"""
-    global _supabase_client, _litellm_client
+    global _supabase_client, _litellm_service, _edge_proxy
     
-    if _supabase_client:
-        await _supabase_client.close()
-        _supabase_client = None
-    
-    if _litellm_client:
-        await _litellm_client.close()
-        _litellm_client = None
-    
-    # Clear caches
-    user_profile_cache.clear()
-    
-    if _auth_service:
-        _auth_service.clear_cache()
-    
-    logger.info("Dependencies cleaned up")
+    try:
+        # Close all service connections
+        if _supabase_client:
+            await _supabase_client.close()
+            _supabase_client = None
+        
+        if _litellm_service:
+            await _litellm_service.close()
+            _litellm_service = None
+        
+        if _edge_proxy:
+            await _edge_proxy.close()
+            _edge_proxy = None
+        
+        # Close cache service
+        if cache_service:
+            await cache_service.close()
+        
+        # Clear caches
+        user_profile_cache.clear()
+        
+        if _auth_service:
+            _auth_service.clear_cache()
+        
+        logger.info("Dependencies cleaned up successfully")
+        
+    except Exception as e:
+        logger.error(f"Error during cleanup: {e}")
 
 
-# Type aliases for cleaner imports
+# Type aliases for cleaner imports (enhanced with new services)
 SupabaseClientDep = Annotated[SupabaseClient, Depends(get_supabase_client)]
-LiteLLMClientDep = Annotated[LiteLLMClient, Depends(get_litellm_client)]
+LiteLLMServiceDep = Annotated[LiteLLMService, Depends(get_litellm_service)]
+LiteLLMClientDep = Annotated[LiteLLMService, Depends(get_litellm_client)]  # Legacy alias
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+EdgeProxyDep = Annotated[EdgeFunctionProxy, Depends(get_edge_proxy)]
+CacheServiceDep = Annotated[CacheService, Depends(get_cache_service)]
+
+# User-related dependencies
+CurrentUserDep = Annotated[UserProfile, Depends(get_current_user)]
 UserIdDep = Annotated[str, Depends(get_current_user_id)]
 UserProfileDep = Annotated[UserProfile, Depends(get_user_profile)]
 UserWithBalanceDep = Annotated[UserProfile, Depends(get_user_with_balance)]

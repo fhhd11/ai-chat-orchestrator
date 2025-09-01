@@ -24,7 +24,7 @@ from .middleware import (
     setup_cors_middleware,
     setup_metrics_middleware
 )
-from .dependencies import cleanup_dependencies
+from .dependencies import initialize_dependencies, cleanup_dependencies
 
 
 # Configure logging
@@ -50,22 +50,44 @@ if not settings.debug:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan management"""
+    """Enhanced application lifespan management with dependency initialization"""
     # Startup
     logger.info(f"Starting {settings.app_name} v{settings.version}")
+    logger.info(f"Environment: {settings.environment}")
     logger.info(f"Debug mode: {settings.debug}")
     logger.info(f"Log level: {settings.log_level}")
     
-    # Create logs directory if needed
+    # Create necessary directories
     if not settings.debug:
         os.makedirs("logs", exist_ok=True)
+    
+    try:
+        # Initialize all dependencies and services
+        logger.info("Initializing application dependencies...")
+        await initialize_dependencies()
+        logger.info("Dependencies initialized successfully")
+        
+        # Log service status
+        logger.info(f"Redis enabled: {settings.redis_enabled}")
+        logger.info(f"Metrics enabled: {settings.enable_metrics}")
+        logger.info(f"Rate limiting: {'enabled' if settings.rate_limit_enabled else 'disabled'}")
+        
+        logger.info(f"Application startup complete - {settings.app_name} v{settings.version}")
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize application: {e}")
+        raise
     
     yield
     
     # Shutdown
-    logger.info("Shutting down application")
-    await cleanup_dependencies()
-    logger.info("Application shutdown complete")
+    logger.info("Shutting down application...")
+    try:
+        await cleanup_dependencies()
+        logger.info("Application shutdown complete")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
+        raise
 
 
 # Create FastAPI application
@@ -96,9 +118,9 @@ app = FastAPI(
     """,
     debug=settings.debug,
     lifespan=lifespan,
-    docs_url="/docs" if settings.debug else None,
-    redoc_url="/redoc" if settings.debug else None,
-    openapi_url="/openapi.json" if settings.debug else None,
+    docs_url="/docs" if settings.enable_swagger else None,
+    redoc_url="/redoc" if settings.enable_redoc else None,
+    openapi_url="/openapi.json" if settings.enable_openapi else None,
 )
 
 # Setup middleware (order matters!)
@@ -171,23 +193,46 @@ async def root():
 
 @app.get("/info", tags=["System"])
 async def info():
-    """Get service information"""
+    """Get enhanced service information"""
     return {
         "service": settings.app_name,
         "version": settings.version,
+        "environment": settings.environment,
         "debug": settings.debug,
         "features": {
-            "streaming": True,
+            "streaming": settings.enable_streaming,
             "authentication": True,
             "metrics": settings.enable_metrics,
-            "regeneration": True
+            "regeneration": settings.enable_regeneration,
+            "branching": settings.enable_branching,
+            "search": settings.enable_search,
+            "batch_operations": settings.enable_batch_operations,
+            "analytics": settings.enable_analytics,
+            "caching": settings.redis_enabled
         },
         "endpoints": {
             "health": "/health",
             "chat": "/v1/chat/completions",
             "regenerate": "/v1/chat/regenerate",
-            "conversations": "/v1/conversations/{conversation_id}",
-            "metrics": "/metrics" if settings.enable_metrics else None
+            "conversations": "/v1/conversations",
+            "conversation_detail": "/v1/conversations/{conversation_id}",
+            "conversation_full": "/v1/conversations/{conversation_id}/full",
+            "branches": "/v1/conversations/{conversation_id}/branches",
+            "messages": "/v1/messages/{message_id}",
+            "models": "/v1/models",
+            "user_profile": "/v1/user/profile",
+            "user_balance": "/v1/user/balance",
+            "metrics": "/metrics" if settings.enable_metrics else None,
+            "docs": "/docs" if settings.enable_swagger else None
+        },
+        "limits": {
+            "max_conversations_per_user": settings.max_conversations_per_user,
+            "max_messages_per_conversation": settings.max_messages_per_conversation,
+            "max_branches_per_conversation": settings.max_branches_per_conversation,
+            "max_export_conversations": settings.max_export_conversations,
+            "max_batch_operation_size": settings.max_batch_operation_size,
+            "default_page_size": settings.default_page_size,
+            "max_page_size": settings.max_page_size
         }
     }
 

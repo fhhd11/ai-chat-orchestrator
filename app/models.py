@@ -1,62 +1,26 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
-from enum import Enum
+"""
+Legacy models module for backward compatibility.
 
+This module imports all models from the new structured packages and provides
+backward compatibility for existing code. New code should import directly
+from the specific model packages.
+"""
 
-class Role(str, Enum):
-    """Chat message role enumeration"""
-    USER = "user"
-    ASSISTANT = "assistant"
-    SYSTEM = "system"
+# Import all models from new structure for backward compatibility
+from .models.chat import *
+from .models.conversation import *
+from .models.message import *
+from .models.user import *
+from .models.common import *
+from .models.litellm import *
 
+# Legacy aliases for backward compatibility
+ConversationResponse = ConversationDetail
+HealthResponse = SystemInfo
 
-class ChatMessage(BaseModel):
-    """Chat message model"""
-    role: Role
-    content: str
-
-
-class ChatCompletionRequest(BaseModel):
-    """Chat completion request model"""
-    conversation_id: Optional[str] = None
-    message: str
-    model: Optional[str] = None
-    temperature: Optional[float] = Field(0.7, ge=0, le=2)
-    max_tokens: Optional[int] = Field(None, gt=0)
-    stream: bool = True
-    parent_message_id: Optional[str] = None
-
-
-class RegenerateRequest(BaseModel):
-    """Regenerate response request model"""
-    conversation_id: str
-    message_id: str
-    model: Optional[str] = None
-    temperature: Optional[float] = None
-
-
-class ConversationResponse(BaseModel):
-    """Conversation response model"""
-    conversation_id: str
-    branch_id: str
-    message_id: str
-
-
-class ErrorResponse(BaseModel):
-    """Error response model"""
-    error: str
-    details: Optional[Dict[str, Any]] = None
-    code: Optional[str] = None
-
-
-class UserProfile(BaseModel):
-    """User profile model from Supabase"""
-    id: str
-    litellm_key: str
-    email: str
-    spend: float
-    max_budget: float
-    available_balance: Optional[float] = None
+# Keep original legacy models that don't have direct equivalents
+from pydantic import BaseModel
+from typing import Optional, Dict, Any
 
 
 class EdgeFunctionRequest(BaseModel):
@@ -89,32 +53,8 @@ class SaveResponseRequest(EdgeFunctionRequest):
     tokens_count: Optional[int] = None
 
 
-class CreateBranchRequest(EdgeFunctionRequest):
-    """Create branch request"""
-    conversation_id: str
-    from_message_id: str
-    name: Optional[str] = None
-
-
 class EdgeFunctionResponse(BaseModel):
     """Base Edge Function response model"""
     success: bool
     error: Optional[str] = None
     data: Optional[Dict[str, Any]] = None
-
-
-class LiteLLMRequest(BaseModel):
-    """LiteLLM chat completion request"""
-    model: str
-    messages: List[Dict[str, str]]
-    stream: bool = True
-    temperature: Optional[float] = 0.7
-    max_tokens: Optional[int] = 2000
-    user: str
-
-
-class HealthResponse(BaseModel):
-    """Health check response"""
-    status: str
-    version: str
-    services: Dict[str, str]

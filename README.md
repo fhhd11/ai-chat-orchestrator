@@ -1,66 +1,91 @@
 # AI Chat Orchestrator
 
-🚀 A high-performance FastAPI microservice that orchestrates streaming chat completions between Supabase Edge Functions and LiteLLM Proxy.
+🚀 A production-ready FastAPI microservice that serves as a universal gateway to multiple LLM providers through Supabase Edge Functions and LiteLLM integration.
 
 ## ✨ Features
 
-- 🔐 **JWT Authentication** via Supabase
-- 🌊 **Server-Sent Events (SSE)** streaming for real-time responses
-- 💰 **User Balance Verification** before processing requests
-- 🔄 **Response Regeneration** with conversation branching
-- 📊 **Prometheus Metrics** for monitoring and observability
-- 🛡️ **Comprehensive Error Handling** with graceful degradation
-- ⚡ **High Performance** with async/await throughout
-- 🏗️ **Production Ready** with proper logging, health checks, and security
+### 🏗️ Architecture & Performance
+- 🔐 **JWT Authentication** via Supabase with intelligent user caching
+- 🌊 **Server-Sent Events (SSE)** streaming for real-time chat responses
+- ⚡ **Universal Edge Function Proxy** with intelligent request routing
+- 🗄️ **Redis Caching** with in-memory fallback for high performance
+- 🔄 **Advanced Conversation Branching** with message trees and merging
+- 📊 **Comprehensive Monitoring** with Prometheus metrics and structured logging
+
+### 🤖 LLM Integration
+- 🎯 **Multi-Provider Support** (OpenAI, Anthropic, Google, Meta, Mistral)
+- 🔍 **Dynamic Model Discovery** with metadata parsing and caching
+- 💰 **Cost Tracking** and user balance verification
+- 🎛️ **Advanced Model Comparison** and filtering capabilities
+- ⚙️ **Flexible Model Configuration** per conversation
+
+### 🛡️ Production Features
+- 🛡️ **Comprehensive Error Handling** with custom exception hierarchy
+- 🔍 **Request Tracing** with structured logging and business metrics
+- 🚀 **High-Performance Design** with async/await throughout
+- 🔒 **Security-First** approach with input validation and sanitization
+- 📈 **Analytics & Insights** with user dashboards and usage statistics
+- 🏥 **Health Monitoring** with readiness/liveness probes
 
 ## 🏗️ Architecture
 
 ```
-[Client] → [AI Chat Orchestrator] → [Supabase Edge Functions] → [Database]
-                  ↓
-            [LiteLLM Proxy] → [Various LLM Providers]
+[Frontend] ←→ [AI Chat Orchestrator] ←→ [Supabase Edge Functions] ←→ [Database]
+                       ↓
+              [Universal Edge Proxy]
+                       ↓
+               [LiteLLM Service] ←→ [Multiple LLM Providers]
+                       ↓
+                [Redis Cache Layer]
 ```
 
-The orchestrator serves as a bridge between your frontend and the AI infrastructure, handling:
+### Service Components
 
-1. **Authentication** - Validates Supabase JWT tokens
-2. **Context Building** - Retrieves conversation history via Edge Functions
-3. **Streaming** - Proxies real-time responses from LiteLLM
-4. **Persistence** - Saves responses back to the database
+1. **Universal Edge Proxy** - Intelligent request routing to Supabase Edge Functions
+2. **LiteLLM Service** - Model management and metadata parsing
+3. **Cache Service** - Redis with in-memory fallback for optimal performance
+4. **Authentication Service** - JWT validation with user profile caching
+5. **Metrics Collection** - Prometheus integration with business analytics
 
 ## 📁 Project Structure
 
 ```
 ai-chat-orchestrator/
 ├── app/
-│   ├── __init__.py
-│   ├── main.py                 # FastAPI application
-│   ├── config.py               # Configuration management
-│   ├── models.py               # Pydantic models
-│   ├── dependencies.py         # Dependency injection
-│   ├── middleware.py           # Custom middleware
-│   ├── routers/
-│   │   ├── __init__.py
-│   │   ├── chat.py            # Chat completion endpoints
-│   │   ├── conversations.py   # Conversation management
-│   │   └── health.py          # Health check endpoints
-│   ├── services/
-│   │   ├── __init__.py
-│   │   ├── supabase_client.py # Supabase integration
-│   │   ├── litellm_client.py  # LiteLLM streaming client
-│   │   └── auth_service.py    # JWT authentication
-│   └── utils/
-│       ├── __init__.py
-│       ├── streaming.py       # SSE utilities
-│       └── errors.py          # Custom exceptions
-├── tests/
-│   ├── __init__.py
-│   ├── test_chat.py
-│   └── test_integration.py
+│   ├── main.py                     # FastAPI application with middleware
+│   ├── config.py                   # Comprehensive configuration (50+ settings)
+│   ├── dependencies.py             # Service injection and user management
+│   ├── models/                     # Pydantic v2 models
+│   │   ├── chat.py                # Chat completion models
+│   │   ├── conversation.py        # Conversation and branch models  
+│   │   ├── message.py             # Message management models
+│   │   ├── user.py                # User profile and analytics models
+│   │   ├── litellm.py             # LLM model metadata
+│   │   └── common.py              # Shared response/pagination models
+│   ├── routers/                    # API endpoints
+│   │   ├── chat.py                # Enhanced chat completions
+│   │   ├── conversations.py       # Full conversation CRUD + search
+│   │   ├── branches.py            # Branch management & merging
+│   │   ├── messages.py            # Message editing & regeneration
+│   │   ├── models.py              # Model discovery & comparison
+│   │   ├── users.py               # User profiles & analytics
+│   │   └── health.py              # Health checks & monitoring
+│   ├── services/                   # Core services
+│   │   ├── edge_proxy.py          # Universal Edge Function proxy
+│   │   ├── litellm_client.py      # Enhanced LiteLLM service
+│   │   ├── cache_service.py       # Redis caching layer
+│   │   └── auth_service.py        # JWT authentication
+│   └── utils/                      # Utilities
+│       ├── errors.py              # Custom exception hierarchy
+│       ├── logging.py             # Structured logging system
+│       ├── validators.py          # Pydantic validators
+│       ├── metrics.py             # Prometheus metrics collection
+│       └── streaming.py           # SSE utilities
+├── tests/                          # Comprehensive test suite
 ├── requirements.txt
-├── .env.example
-├── railway.json               # Railway deployment config
-├── Dockerfile
+├── .env.example                    # Environment template
+├── railway.json                    # Railway deployment config
+├── Dockerfile                      # Production container
 └── README.md
 ```
 
@@ -69,313 +94,413 @@ ai-chat-orchestrator/
 ### Prerequisites
 
 - Python 3.11+
-- Supabase project with Edge Functions deployed
-- LiteLLM instance running
-- Environment variables configured
+- Redis (optional, will fallback to in-memory cache)
+- Supabase project with Edge Functions
+- LiteLLM instance or API keys for direct provider access
 
 ### Local Development
 
-1. **Clone the repository**
+1. **Clone and setup**
 ```bash
 git clone <repository-url>
 cd ai-chat-orchestrator
-```
-
-2. **Install dependencies**
-```bash
 pip install -r requirements.txt
 ```
 
-3. **Configure environment**
+2. **Configure environment**
 ```bash
 cp .env.example .env
-# Edit .env with your actual values
+# Edit .env with your configuration
 ```
 
-4. **Run the application**
+3. **Run the application**
 ```bash
-# Development mode
+# Development with auto-reload
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-# Or using Python directly
+# Or using Python module
 python -m app.main
 ```
 
-5. **Access the API**
-- API Documentation: http://localhost:8000/docs
-- Health Check: http://localhost:8000/health
-- Metrics: http://localhost:8000/metrics
+4. **Access services**
+- **API Documentation**: http://localhost:8000/docs
+- **Health Dashboard**: http://localhost:8000/health  
+- **Prometheus Metrics**: http://localhost:8000/metrics
+- **Service Info**: http://localhost:8000/info
 
 ## 🔧 Configuration
 
-### Environment Variables
+### Core Environment Variables
 
 ```env
-# Supabase Configuration
+# Application
+APP_NAME="AI Chat Orchestrator"
+VERSION="2.0.0"
+ENVIRONMENT="development"
+DEBUG=false
+LOG_LEVEL="INFO"
+
+# Supabase Integration  
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_KEY=your_service_key  # Optional
-EDGE_FUNCTION_URL=https://your-project.supabase.co/functions/v1/conversation-manager
+SUPABASE_SERVICE_KEY=your_service_key
+EDGE_FUNCTION_URL=https://your-project.supabase.co/functions/v1
 
 # LiteLLM Configuration
-LITELLM_URL=https://your-litellm-instance.railway.app
-LITELLM_MASTER_KEY=your_master_key  # Optional
+LITELLM_URL=https://your-litellm.railway.app
+LITELLM_MASTER_KEY=your_master_key
+LITELLM_TIMEOUT=120
 
-# Security
+# Redis Caching (Optional)
+REDIS_ENABLED=true
+REDIS_URL=redis://localhost:6379
+CACHE_TTL_DEFAULT=3600
+CACHE_TTL_USER_PROFILE=1800
+CACHE_TTL_MODELS=3600
+
+# Security & JWT  
 JWT_SECRET_KEY=your_supabase_jwt_secret
 JWT_ALGORITHM=HS256
+CORS_ORIGINS=["http://localhost:3000"]
 
 # Performance Tuning
 MAX_CONTEXT_MESSAGES=100
 STREAM_TIMEOUT=120
 CONNECTION_POOL_SIZE=100
+MAX_CONCURRENT_REQUESTS=50
+
+# Business Logic
+MAX_BRANCHES_PER_CONVERSATION=10
+MAX_CONVERSATIONS_PER_USER=1000
+MAX_MESSAGES_PER_CONVERSATION=500
+MIN_BALANCE_THRESHOLD=0.01
+
+# Feature Flags
+ENABLE_BRANCH_MERGING=true
+ENABLE_MESSAGE_EDITING=true
+ENABLE_CONVERSATION_EXPORT=true
+ENABLE_USER_ANALYTICS=true
+ENABLE_BATCH_OPERATIONS=true
 
 # Monitoring
 ENABLE_METRICS=true
-LOG_LEVEL=INFO
-DEBUG=false
+ENABLE_STRUCTURED_LOGGING=true
+METRICS_PORT=9090
 ```
 
-### Required Supabase Setup
+### Redis Configuration (Optional)
 
-Ensure your Supabase project has:
+If Redis is not available, the system automatically falls back to in-memory caching:
 
-1. **Edge Function** deployed at `/conversation-manager` with endpoints:
-   - `POST /add-message`
-   - `POST /build-context`
-   - `POST /save-response`
-   - `POST /create-branch`
+```env
+# Redis Settings
+REDIS_ENABLED=true
+REDIS_URL=redis://localhost:6379/0
+REDIS_PASSWORD=your_password
+REDIS_MAX_CONNECTIONS=10
+REDIS_RETRY_ATTEMPTS=3
+```
 
-2. **Database table** `user_profiles` with columns:
-   - `id` (UUID, primary key)
-   - `litellm_key` (text)
-   - `email` (text)
-   - `spend` (numeric)
-   - `max_budget` (numeric)
-   - `available_balance` (numeric)
+## 📚 API Reference
 
-3. **JWT Secret** configured in your environment
-
-## 📚 API Endpoints
-
-### Chat Completions
+### 🎯 Chat Completions
 
 **POST** `/v1/chat/completions`
 
-Stream or non-stream chat completions.
+Enhanced streaming chat with conversation context and branching.
 
 ```bash
 curl -X POST http://localhost:8000/v1/chat/completions \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "message": "Hello, how are you?",
-    "stream": true,
+    "message": "Explain quantum computing",
+    "conversation_id": "optional-uuid",
     "model": "gpt-4",
-    "temperature": 0.7
+    "stream": true,
+    "temperature": 0.7,
+    "max_tokens": 2000,
+    "parent_message_id": "uuid-for-branching"
   }'
 ```
 
-**Request Body:**
-```json
-{
-  "conversation_id": "uuid",        // Optional, creates new if not provided
-  "message": "User message",        // Required
-  "model": "gpt-4",                // Optional, uses conversation default
-  "temperature": 0.7,              // Optional, 0-2
-  "max_tokens": 2000,              // Optional
-  "stream": true,                  // Optional, default true
-  "parent_message_id": "uuid"      // Optional, for branching
-}
-```
+### 💬 Conversation Management
 
-### Response Regeneration
+**GET** `/v1/conversations` - List user conversations with search/filter
+**POST** `/v1/conversations` - Create new conversation
+**GET** `/v1/conversations/{id}` - Get conversation details
+**GET** `/v1/conversations/{id}/full` - Get complete message tree
+**POST** `/v1/conversations/batch` - Batch operations
+**GET** `/v1/conversations/{id}/export` - Export conversation data
 
-**POST** `/v1/chat/regenerate`
+### 🌳 Branch Management
 
-Regenerate an assistant response by creating a new branch.
+**GET** `/v1/conversations/{id}/branches` - List branches
+**POST** `/v1/conversations/{id}/branches` - Create branch
+**POST** `/v1/conversations/{id}/branches/{branch_id}/activate` - Switch branch
+**POST** `/v1/conversations/{id}/branches/{branch_id}/merge` - Merge branches
+**GET** `/v1/conversations/{id}/branches/{branch_id}/stats` - Branch statistics
 
-```bash
-curl -X POST http://localhost:8000/v1/chat/regenerate \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "conversation_id": "conversation-uuid",
-    "message_id": "message-uuid",
-    "model": "gpt-4"
-  }'
-```
+### 💬 Message Operations
 
-### Conversation Management
+**GET** `/v1/conversations/{id}/messages` - List messages with pagination
+**POST** `/v1/conversations/{id}/messages` - Add message
+**PATCH** `/v1/conversations/{id}/messages/{msg_id}` - Edit message
+**POST** `/v1/conversations/{id}/messages/{msg_id}/regenerate` - Regenerate response
+**POST** `/v1/conversations/{id}/messages/search` - Search messages
 
-**GET** `/v1/conversations/{conversation_id}`
+### 🤖 Model Management
 
-Retrieve conversation details and message tree.
+**GET** `/v1/models` - List available models with filtering
+**GET** `/v1/models/{model_id}` - Get model details
+**GET** `/v1/models/providers` - List providers with statistics  
+**GET** `/v1/models/search?q=query` - Search models
+**GET** `/v1/models/compare?model_ids=id1,id2` - Compare models
+**POST** `/v1/models/refresh` - Refresh model cache
 
-```bash
-curl -X GET http://localhost:8000/v1/conversations/your-conversation-id \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
+### 👤 User Management
 
-### Health Checks
+**GET** `/v1/users/me` - Current user profile
+**PATCH** `/v1/users/me` - Update profile
+**GET** `/v1/users/me/usage` - Usage statistics
+**GET** `/v1/users/me/balance` - Balance information
+**GET** `/v1/users/me/analytics/dashboard` - Analytics dashboard
+**GET** `/v1/users/me/api-keys` - List API keys
+**POST** `/v1/users/me/api-keys` - Create API key
+**GET** `/v1/users/me/export` - Export user data (GDPR)
 
-- **GET** `/health` - Comprehensive health check
-- **GET** `/ready` - Readiness probe for Kubernetes
-- **GET** `/live` - Liveness probe for Kubernetes
+### 🏥 Health & Monitoring
 
-### Monitoring
-
-- **GET** `/metrics` - Prometheus metrics (if enabled)
-- **GET** `/info` - Service information
+**GET** `/health` - Comprehensive health check
+**GET** `/ready` - Readiness probe  
+**GET** `/live` - Liveness probe
+**GET** `/metrics` - Prometheus metrics
+**GET** `/info` - Service information
 
 ## 🐳 Deployment
 
-### Docker
+### Docker Production
 
 ```bash
-# Build image
+# Build optimized image
 docker build -t ai-chat-orchestrator .
 
-# Run container
+# Run with environment file
 docker run -p 8000:8000 --env-file .env ai-chat-orchestrator
+
+# With Redis
+docker-compose up -d
 ```
 
-### Railway
+### Railway Deployment
 
-1. **Connect your repository** to Railway
+1. **Fork repository** and connect to Railway
 2. **Set environment variables** in Railway dashboard
-3. **Deploy** - Railway will automatically use `railway.json` configuration
+3. **Deploy** - Automatic deployment via `railway.json`
 
-The service will be available at your Railway-provided URL.
+### Environment-Specific Configuration
 
-### Production Considerations
+**Development:**
+```env
+DEBUG=true
+LOG_LEVEL=DEBUG
+REDIS_ENABLED=false  # Use in-memory cache
+```
 
-- Set `DEBUG=false` in production
-- Use proper logging levels (`INFO` or `WARNING`)
-- Configure proper CORS origins instead of `*`
-- Set up proper monitoring and alerting
-- Use a reverse proxy (nginx) for additional security
-- Configure proper health checks for orchestration platforms
+**Production:**
+```env
+DEBUG=false
+LOG_LEVEL=INFO
+REDIS_ENABLED=true
+ENABLE_METRICS=true
+```
+
+## 📊 Monitoring & Analytics
+
+### Prometheus Metrics
+
+Available at `/metrics`:
+
+**HTTP Metrics:**
+- `http_requests_total` - Request counts by endpoint/status
+- `http_request_duration_seconds` - Response time histograms
+
+**Business Metrics:**
+- `chat_completions_total` - Chat requests by model/user
+- `chat_tokens_total` - Token usage tracking
+- `conversations_total` - Conversation operations
+- `revenue_total_usd` - Revenue tracking
+
+**System Metrics:**
+- `active_streams_current` - Live streaming connections
+- `cache_operations_total` - Cache hit/miss rates
+- `errors_total` - Error tracking by type
+
+### Structured Logging
+
+Logs include contextual information:
+- Request IDs for tracing
+- User context and operations
+- Performance metrics
+- Business events
+
+### Analytics Dashboard
+
+User analytics include:
+- Token usage over time
+- Model preference analysis  
+- Conversation patterns
+- Cost tracking
+- Feature adoption metrics
+
+## 🔒 Security Features
+
+- **JWT Authentication** with Supabase integration
+- **Input Sanitization** with custom Pydantic validators
+- **SQL Injection Prevention** in search queries
+- **Rate Limiting** ready for implementation
+- **Secure Headers** middleware
+- **Request Tracing** for security auditing
+- **CORS Configuration** with environment-specific origins
+- **API Key Management** with scoping and expiration
 
 ## 🧪 Testing
 
 ```bash
-# Run all tests
+# Run full test suite
 pytest
 
-# Run with coverage
-pytest --cov=app
+# With coverage reporting
+pytest --cov=app --cov-report=html
 
-# Run specific test file
-pytest tests/test_chat.py
-
-# Run integration tests only
+# Integration tests
 pytest tests/test_integration.py -v
+
+# Specific router tests
+pytest tests/test_chat.py tests/test_conversations.py
 ```
-
-## 📊 Monitoring & Metrics
-
-The service exposes Prometheus metrics at `/metrics` when enabled:
-
-- `http_requests_total` - Total HTTP requests by method, endpoint, status
-- `http_request_duration_seconds` - Request duration histogram
-- `streaming_requests_total` - Streaming chat requests
-- `active_streams_gauge` - Currently active streams
-
-### Grafana Dashboard
-
-Create dashboards to monitor:
-- Request rates and latencies
-- Error rates by endpoint
-- Stream success/failure rates
-- Service health and uptime
-
-## 🔒 Security
-
-- JWT token validation on all authenticated endpoints
-- Input validation with Pydantic models
-- Rate limiting ready (implement as needed)
-- Secure headers middleware
-- Request ID tracking for security auditing
-- No sensitive data in logs
 
 ## 🛠️ Development
 
-### Code Style
+### Code Standards
 
-- Follow PEP 8
-- Use type hints throughout
-- Async/await for all I/O operations
-- Comprehensive error handling
-- Structured logging
+- **Type Safety**: Full type hints with mypy compliance
+- **Async Design**: Non-blocking I/O throughout
+- **Error Handling**: Comprehensive exception hierarchy
+- **Testing**: Unit and integration test coverage
+- **Documentation**: OpenAPI/Swagger with detailed schemas
 
-### Adding New Endpoints
+### Adding Features
 
-1. Create route in appropriate router file
-2. Add Pydantic models in `models.py`
-3. Update dependencies if needed
-4. Add comprehensive tests
-5. Update this README
+1. **Model Definition**: Add Pydantic models in `app/models/`
+2. **Router Implementation**: Create endpoints in `app/routers/`
+3. **Service Logic**: Implement in `app/services/`
+4. **Testing**: Add comprehensive tests
+5. **Documentation**: Update OpenAPI schemas
+
+### Performance Optimization
+
+- **Connection Pooling**: Configured for high concurrency
+- **Caching Strategy**: Multi-layer with TTL management  
+- **Streaming Optimization**: Efficient SSE implementation
+- **Resource Management**: Proper cleanup and lifecycle management
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
-**Authentication Errors (401)**
-- Verify JWT secret key matches Supabase
-- Check token expiration
-- Ensure proper Authorization header format
+**Authentication (401 Errors):**
+```bash
+# Check JWT configuration
+echo $JWT_SECRET_KEY | base64 -d
 
-**Edge Function Errors (500)**
-- Check Supabase Edge Function logs
-- Verify edge function URL
-- Confirm edge function is deployed and accessible
+# Validate token format
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/v1/users/me
+```
 
-**LiteLLM Errors**
-- Verify LiteLLM instance is running
-- Check user's litellm_key is valid
-- Monitor rate limits
+**Edge Function Connectivity:**
+```bash
+# Test edge function directly
+curl -X POST $EDGE_FUNCTION_URL/conversation-manager \
+  -H "Authorization: Bearer $SUPABASE_ANON_KEY"
+```
 
-**Streaming Issues**
-- Check client SSE implementation
-- Verify network doesn't buffer responses
-- Monitor connection timeouts
+**Redis Connection Issues:**
+```bash
+# Test Redis connectivity
+redis-cli -u $REDIS_URL ping
 
-### Logs
+# Check fallback behavior
+REDIS_ENABLED=false uvicorn app.main:app
+```
 
-Logs are structured and include:
-- Request IDs for tracing
-- User context (when available)
-- Performance metrics
-- Error details with stack traces
+**Model Discovery Problems:**
+```bash
+# Test LiteLLM connection
+curl $LITELLM_URL/models -H "Authorization: Bearer $LITELLM_MASTER_KEY"
+
+# Refresh model cache
+curl -X POST http://localhost:8000/v1/models/refresh \
+  -H "Authorization: Bearer $JWT_TOKEN"
+```
+
+### Performance Debugging
+
+Monitor key metrics:
+- Response times via `/metrics`
+- Cache hit rates in logs
+- Connection pool utilization
+- Memory usage patterns
+
+### Log Analysis
 
 ```bash
-# View logs in development
-tail -f logs/app.log
+# Filter by request ID
+grep "req_12345" logs/app.log
 
-# In production with systemd
-journalctl -u ai-chat-orchestrator -f
+# Monitor error patterns  
+grep "ERROR" logs/app.log | tail -20
+
+# Business metrics
+grep "business_event" logs/app.log | jq .
 ```
+
+## 🔄 Migration from v1.x
+
+Key changes in v2.0:
+- **New routing structure** with domain separation
+- **Enhanced caching** with Redis integration
+- **Improved error handling** with custom exceptions
+- **Advanced conversation features** with branching
+- **Comprehensive monitoring** with business metrics
+
+Migration steps:
+1. Update environment variables (see `.env.example`)
+2. Update API client code for new endpoints
+3. Test new caching behavior
+4. Configure monitoring and alerts
 
 ## 📄 License
 
-[MIT License](LICENSE)
+MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
+1. **Fork** the repository
+2. **Create** feature branch (`git checkout -b feature/amazing-feature`)
+3. **Add** comprehensive tests
+4. **Ensure** all tests pass (`pytest`)
+5. **Submit** pull request with detailed description
 
 ## 📞 Support
 
-For issues and questions:
-- Check the troubleshooting section
-- Review logs for error details
-- Open an issue with detailed information
+- **Issues**: GitHub Issues with detailed reproduction steps  
+- **Discussions**: GitHub Discussions for questions
+- **Documentation**: Check `/docs` endpoint for API reference
+- **Monitoring**: Use `/health` endpoint for diagnostics
 
 ---
 
-Built with ❤️ using FastAPI, Supabase, and LiteLLM
+**Built with ❤️ for the LLM ecosystem**
+
+*Leveraging FastAPI, Supabase, LiteLLM, Redis, and Prometheus for production-scale AI applications.*
